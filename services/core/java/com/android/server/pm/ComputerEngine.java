@@ -1612,6 +1612,40 @@ public class ComputerEngine implements Computer {
                 }
             });
 
+            if ("android".equals(p.getPackageName())) {
+                try {
+                    android.security.pif.PlayIntegritySpoofService pifService =
+                            android.security.pif.PlayIntegritySpoofService.getInstance();
+                    if (pifService.isSpoofSignatureEnabled()) {
+                        String[] callingPackages = getPackagesForUid(callingUid);
+                        boolean isGms = false;
+                        if (callingPackages != null) {
+                            for (String pkg : callingPackages) {
+                                if ("com.google.android.gms".equals(pkg)) {
+                                    isGms = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (isGms) {
+                            Signature pifSignature = new Signature(pifService.getRomSignatureBytes());
+                            packageInfo.signatures = new Signature[]{pifSignature};
+                            packageInfo.signingInfo = new SigningInfo(
+                                    new SigningDetails(
+                                            packageInfo.signatures,
+                                            SigningDetails.SignatureSchemeVersion.SIGNING_BLOCK_V3,
+                                            SigningDetails.toSigningKeys(packageInfo.signatures),
+                                            null
+                                    )
+                            );
+                            Slog.d(TAG, "PIF: Spoofed ROM signature for 'android' package to GMS");
+                        }
+                    }
+                } catch (Exception e) {
+                    Slog.e(TAG, "PIF: Failed to spoof ROM signature", e);
+                }
+            }
+
             return packageInfo;
         } else if ((flags & (MATCH_UNINSTALLED_PACKAGES | MATCH_ARCHIVED_PACKAGES)) != 0
                 && PackageUserStateUtils.isAvailable(state, flags)) {

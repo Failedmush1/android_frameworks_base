@@ -355,6 +355,24 @@ public class Application extends ContextWrapper implements ComponentCallbacks2 {
     /* package */ final void attach(Context context) {
         attachBaseContext(context);
         setLoadedApk(context);
+        String packageName = context != null ? context.getPackageName() : null;
+        String processName = getProcessName();
+        android.security.pif.PlayIntegritySpoofService pif =
+                android.security.pif.PlayIntegritySpoofService.getInstance();
+        if (packageName != null) {
+            if (pif.shouldSpoofPhotos(packageName)) {
+                pif.spoofPhotosProps();
+            }
+        }
+        if (processName != null && pif.shouldSpoof(processName)) {
+            pif.spoofBuildFields(processName);
+            if (pif.isSpoofProviderEnabled()) {
+                pif.spoofProvider(processName);
+            }
+            if (pif.isSpoofSignatureEnabled()) {
+                pif.spoofSignature(processName);
+            }
+        }
     }
 
     @android.ravenwood.annotation.RavenwoodIgnore(blockedBy = LoadedApk.class)

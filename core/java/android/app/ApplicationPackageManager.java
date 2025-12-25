@@ -841,6 +841,15 @@ public class ApplicationPackageManager extends PackageManager {
     @Override
     @RavenwoodRedirect
     public boolean hasSystemFeature(String name, int version) {
+        android.security.pif.PlayIntegritySpoofService pifService =
+                android.security.pif.PlayIntegritySpoofService.getInstance();
+        if (pifService.shouldSpoofPhotos(ActivityThread.currentPackageName())) {
+            Boolean hasFeature = pifService.hasSystemFeature(name, version);
+            if (hasFeature != null) {
+                return hasFeature;
+            }
+        }
+
         // We check for system features in the following order:
         //    * Build time-defined system features (constant, very efficient)
         //    * SDK-defined system features (cached at process start, very efficient)
