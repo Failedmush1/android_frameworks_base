@@ -775,6 +775,8 @@ interface IActivityManager {
     /* PIF */
     String getSpoofPifConfig();
 
+    String getSpoofPifSpoofPhotos();
+
     /* Tricky Store */
     String getSpoofTrickyStoreTarget();
 

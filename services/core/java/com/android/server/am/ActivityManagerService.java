@@ -18741,6 +18741,11 @@ public class ActivityManagerService extends IActivityManager.Stub
     }
 
     @Override
+    public String getSpoofPifSpoofPhotos() {
+        return AxExtServiceFactory.getSpoofManager().getPifSpoofPhotos();
+    }
+
+    @Override
     public String getSpoofTrickyStoreTarget() {
         return AxExtServiceFactory.getSpoofManager().getTrickyStoreTarget();
     }

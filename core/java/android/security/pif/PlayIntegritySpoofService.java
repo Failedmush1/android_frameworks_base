@@ -12,6 +12,7 @@ import android.os.Parcelable;
 import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.text.TextUtils;
+import android.util.ArraySet;
 import android.util.Base64;
 import android.util.JsonReader;
 import android.util.Log;
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,30 +33,88 @@ public final class PlayIntegritySpoofService {
     private static final String DROIDGUARD_PACKAGE = "com.google.android.gms.unstable";
     private static final String VENDING_PACKAGE = "com.android.vending";
     private static final String GMS_PACKAGE = "com.google.android.gms";
+    private static final String GPHOTOS_PACKAGE = "com.google.android.apps.photos";
 
-    private static final Set<String> PIXEL_FEATURES = Set.of(
-        "com.google.android.feature.PIXEL_2022_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2022_MIDYEAR_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2023_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2023_MIDYEAR_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2024_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2024_MIDYEAR_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2025_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2025_MIDYEAR_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2026_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2026_MIDYEAR_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2021_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2021_MIDYEAR_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2020_EXPERIENCE",
-        "com.google.android.feature.PIXEL_2020_MIDYEAR_EXPERIENCE",
-        "PIXEL_2017_PRELOAD",
-        "PIXEL_2018_PRELOAD",
-        "PIXEL_2019_MIDYEAR_PRELOAD",
-        "PIXEL_2019_PRELOAD",
-        "PIXEL_2020_EXPERIENCE",
-        "PIXEL_2020_MIDYEAR_EXPERIENCE",
-        "PIXEL_EXPERIENCE"
+    private static final Map<String, String> sPhotosProps = Map.of(
+        "PRODUCT", "marlin",
+        "DEVICE", "marlin",
+        "MANUFACTURER", "Google",
+        "BRAND", "google",
+        "MODEL", "Pixel XL",
+        "FINGERPRINT", "google/marlin/marlin:10/QP1A.191005.007.A3/5972272:user/release-keys"
     );
+
+    private static final ArraySet<String> PRIV_PKGS = new ArraySet<>();
+    private static final ArraySet<String> FEATURES_PIXEL = new ArraySet<>();
+    private static final ArraySet<String> FEATURES_PIXEL_OTHERS = new ArraySet<>();
+    private static final ArraySet<String> FEATURES_TENSOR = new ArraySet<>();
+    private static final ArraySet<String> FEATURES_NEXUS = new ArraySet<>();
+
+    static {
+        Collections.addAll(FEATURES_PIXEL,
+                "com.google.android.apps.photos.PIXEL_2019_PRELOAD",
+                "com.google.android.apps.photos.PIXEL_2019_MIDYEAR_PRELOAD",
+                "com.google.android.apps.photos.PIXEL_2018_PRELOAD",
+                "com.google.android.apps.photos.PIXEL_2017_PRELOAD",
+                "com.google.android.feature.PIXEL_2021_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2020_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2020_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2019_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2019_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2018_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2017_EXPERIENCE",
+                "com.google.android.feature.PIXEL_EXPERIENCE",
+                "com.google.android.feature.GOOGLE_BUILD",
+                "com.google.android.feature.GOOGLE_EXPERIENCE"
+        );
+
+        Collections.addAll(FEATURES_PIXEL_OTHERS,
+                "com.google.android.feature.ASI",
+                "com.google.android.feature.ANDROID_ONE_EXPERIENCE",
+                "com.google.android.feature.GOOGLE_FI_BUNDLED",
+                "com.google.android.feature.LILY_EXPERIENCE",
+                "com.google.android.feature.TURBO_PRELOAD",
+                "com.google.android.feature.WELLBEING",
+                "com.google.lens.feature.IMAGE_INTEGRATION",
+                "com.google.lens.feature.CAMERA_INTEGRATION",
+                "com.google.photos.trust_debug_certs",
+                "com.google.android.feature.AER_OPTIMIZED",
+                "com.google.android.feature.NEXT_GENERATION_ASSISTANT",
+                "android.software.game_service",
+                "com.google.android.feature.EXCHANGE_6_2",
+                "com.google.android.apps.dialer.call_recording_audio",
+                "com.google.android.apps.dialer.SUPPORTED"
+        );
+
+        Collections.addAll(FEATURES_TENSOR,
+                "com.google.android.feature.PIXEL_2026_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2026_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2025_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2025_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2024_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2024_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2023_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2023_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2022_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2022_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2021_EXPERIENCE"
+        );
+
+        Collections.addAll(FEATURES_NEXUS,
+                "com.google.android.apps.photos.NEXUS_PRELOAD",
+                "com.google.android.apps.photos.nexus_preload",
+                "com.google.android.feature.PIXEL_EXPERIENCE",
+                "com.google.android.feature.GOOGLE_BUILD",
+                "com.google.android.feature.GOOGLE_EXPERIENCE"
+        );
+
+        Collections.addAll(PRIV_PKGS,
+                "com.google.android.googlequicksearchbox",
+                "com.google.android.apps.photos",
+                "com.google.android.apps.pixel.agent",
+                "com.google.android.apps.pixel.creativeassistant"
+        );
+    }
 
     private static final String ROM_SIGNATURE_DATA = "MIIFyTCCA7GgAwIBAgIVALyxxl+zDS9SL68SzOr48309eAZyMA0GCSqGSIb3DQEBCwUAMHQxCzAJ" +
             "BgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1Nb3VudGFpbiBWaWV3MRQw" +
@@ -100,6 +160,7 @@ public final class PlayIntegritySpoofService {
 
     private volatile boolean mConfigLoaded = false;
     private volatile boolean mSignatureSpoofed = false;
+    private volatile boolean mSpoofPhotos = true;
 
     private PlayIntegritySpoofService() {}
 
@@ -125,6 +186,8 @@ public final class PlayIntegritySpoofService {
         String content;
         try {
             content = am.getSpoofPifConfig();
+            String spoofPhotos = am.getSpoofPifSpoofPhotos();
+            mSpoofPhotos = spoofPhotos == null || "1".equals(spoofPhotos) || "true".equalsIgnoreCase(spoofPhotos);
         } catch (Throwable e) {
             Log.e(TAG, "Failed to fetch PIF config from system_server", e);
             return;
@@ -481,8 +544,38 @@ public final class PlayIntegritySpoofService {
         return Base64.decode(ROM_SIGNATURE_DATA, Base64.DEFAULT);
     }
 
+    public boolean shouldSpoofPhotos(String packageName) {
+        if (!TextUtils.equals(GPHOTOS_PACKAGE, packageName)) return false;
+        return mSpoofPhotos;
+    }
+
+    public void spoofPhotosProps() {
+        for (Map.Entry<String, String> entry : sPhotosProps.entrySet()) {
+            spoofField(entry.getKey(), entry.getValue(), "GP");
+        }
+    }
+
     public Boolean hasSystemFeature(String name, int version) {
+        if (name == null) return null;
+
         final String pkgName = ActivityThread.currentPackageName();
+        if (pkgName != null && PRIV_PKGS.contains(pkgName)) {
+            if (shouldSpoofPhotos(pkgName)) {
+                if (FEATURES_PIXEL.contains(name)) return false;
+                if (FEATURES_PIXEL_OTHERS.contains(name)) return true;
+                if (FEATURES_TENSOR.contains(name)) return false;
+                if (FEATURES_NEXUS.contains(name)) return true;
+            } else {
+                if (FEATURES_PIXEL.contains(name)) return true;
+                if (FEATURES_PIXEL_OTHERS.contains(name)) return true;
+                if (FEATURES_TENSOR.contains(name)) return true;
+                if (FEATURES_NEXUS.contains(name)) return true;
+            }
+        }
+
+        if (FEATURES_PIXEL.contains(name)) return true;
+        if (FEATURES_PIXEL_OTHERS.contains(name)) return true;
+
         return null;
     }
 
