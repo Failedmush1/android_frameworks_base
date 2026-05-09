@@ -49,13 +49,11 @@ public final class PlayIntegritySpoofService {
     private static final String GMS_PACKAGE = "com.google.android.gms";
     private static final String GPHOTOS_PACKAGE = "com.google.android.apps.photos";
 
-    private static final Map<String, Object> PIXEL_XL_PROPS = Map.of(
-        "BRAND", "google",
-        "MANUFACTURER", "Google",
-        "DEVICE", "marlin",
+    private static final Map<String, String> sPhotosProps = Map.of(
         "PRODUCT", "marlin",
-        "HARDWARE", "marlin",
-        "ID", "QP1A.191005.007.A3",
+        "DEVICE", "marlin",
+        "MANUFACTURER", "Google",
+        "BRAND", "google",
         "MODEL", "Pixel XL",
         "FINGERPRINT", "google/marlin/marlin:10/QP1A.191005.007.A3/5972272:user/release-keys"
     );
@@ -674,10 +672,9 @@ public final class PlayIntegritySpoofService {
     }
 
     public void spoofPhotosProps() {
-        for (Map.Entry<String, Object> entry : PIXEL_XL_PROPS.entrySet()) {
-            spoofField(entry.getKey(), String.valueOf(entry.getValue()), "Photos");
+        for (Map.Entry<String, String> entry : sPhotosProps.entrySet()) {
+            spoofField(entry.getKey(), entry.getValue(), "GP");
         }
-        Log.i(TAG, "Photos spoofing enabled - device appears as Pixel XL");
     }
 
     public Boolean hasSystemFeature(String name, int version) {

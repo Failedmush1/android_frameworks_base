@@ -8205,6 +8205,21 @@ public final class ActivityThread extends ClientTransactionHandler
             HardwareRenderer.setIsolatedProcess(true);
         }
 
+        android.security.pif.PlayIntegritySpoofService pifService =
+                android.security.pif.PlayIntegritySpoofService.getInstance();
+        if (pifService.shouldSpoof(data.processName)) {
+            pifService.spoofBuildFields(data.processName);
+            if (pifService.isSpoofProviderEnabled()) {
+                pifService.spoofProvider(data.processName);
+            }
+            if (pifService.isSpoofSignatureEnabled()) {
+                pifService.spoofSignature(data.processName);
+            }
+        }
+        if (data.appInfo != null && pifService.shouldSpoofPhotos(data.appInfo.packageName)) {
+            pifService.spoofPhotosProps();
+        }
+
         // Install the Network Security Config Provider. This must happen before the application
         // code is loaded to prevent issues with instances of TLS objects being created before
         // the provider is installed.
