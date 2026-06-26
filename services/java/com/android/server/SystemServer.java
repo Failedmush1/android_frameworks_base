@@ -1439,6 +1439,10 @@ public final class SystemServer implements Dumpable {
         mSystemServiceManager.startService(new OverlayManagerService(mSystemContext));
         t.traceEnd();
 
+        t.traceBegin("StartAxSpoofManagerService");
+        mSystemServiceManager.startService(com.android.server.spoof.AxSpoofManagerService.class);
+        t.traceEnd();
+
         // Manages Resources packages
         t.traceBegin("StartResourcesManagerService");
         ResourcesManagerService resourcesService = new ResourcesManagerService(mSystemContext);
