@@ -88,9 +88,10 @@ public final class CertificateHacker {
 
             for (ASN1Encodable element : teeEnforced) {
                 ASN1TaggedObject taggedObject = (ASN1TaggedObject) element;
-                if (taggedObject.getTagNo() == 704) {
+                int tag = taggedObject.getTagNo();
+                if (tag == 704) {
                     originalRootOfTrust = taggedObject.getObject().toASN1Primitive();
-                } else {
+                } else if (tag != 705 && tag != 706 && tag != 718 && tag != 719) {
                     vector.add(taggedObject);
                 }
             }
@@ -291,7 +292,7 @@ public final class CertificateHacker {
             new ASN1Integer(AttestationUtils.getPatchLevel(false))));
         vector.add(new DERTaggedObject(true, 705, 
             new ASN1Integer(AttestationUtils.getOsVersion())));
-        vector.add(new DERTaggedObject(704, hackedRootOfTrust));
+        vector.add(new DERTaggedObject(true, 704, hackedRootOfTrust));
 
         DERSequence hackedEnforced = new DERSequence(vector);
         originalEncodables[7] = hackedEnforced;
