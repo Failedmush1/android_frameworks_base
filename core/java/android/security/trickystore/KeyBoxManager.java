@@ -70,7 +70,20 @@ public class KeyBoxManager {
     }
 
     public KeyBox getKeybox(String algorithm) {
-        return mKeyboxes.get(algorithm);
+        if (algorithm == null) return null;
+        String normalized;
+        if ("ecdsa".equalsIgnoreCase(algorithm) || "ec".equalsIgnoreCase(algorithm)) {
+            normalized = "EC";
+        } else if ("rsa".equalsIgnoreCase(algorithm)) {
+            normalized = "RSA";
+        } else {
+            normalized = algorithm;
+        }
+        KeyBox box = mKeyboxes.get(normalized);
+        if (box == null && "EC".equals(normalized)) {
+            box = mKeyboxes.get("ECDSA");
+        }
+        return box;
     }
 
     public void parseKeybox(String xmlContent) {

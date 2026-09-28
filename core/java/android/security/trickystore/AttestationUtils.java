@@ -34,7 +34,16 @@ public final class AttestationUtils {
 
     public static byte[] getBootKey() {
         if (sBootKey == null) {
-            sBootKey = generateRandomBytes(32);
+            String pubKeyDigest = SystemProperties.get("ro.boot.vbmeta.public_key_digest", null);
+            if (pubKeyDigest != null && pubKeyDigest.length() == 64) {
+                try {
+                    sBootKey = hexStringToByteArray(pubKeyDigest);
+                } catch (Exception ignored) {
+                }
+            }
+            if (sBootKey == null) {
+                sBootKey = generateRandomBytes(32);
+            }
         }
         return sBootKey;
     }

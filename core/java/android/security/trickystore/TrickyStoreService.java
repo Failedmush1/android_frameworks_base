@@ -17,6 +17,7 @@
 package android.security.trickystore;
 
 import android.app.ActivityManager;
+import android.app.ActivityThread;
 import android.app.IActivityManager;
 import android.os.RemoteException;
 import android.security.keystore.KeyGenParameterSpec;
@@ -40,6 +41,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class TrickyStoreService {
     private static final String TAG = "TrickyStoreService";
+
+    private static final Set<String> DEFAULT_TARGETS = Set.of(
+        "com.google.android.gms",
+        "io.github.vvb2060.keyattestation"
+    );
 
     private static TrickyStoreService sInstance;
 
@@ -361,26 +367,52 @@ public class TrickyStoreService {
     }
 
     public boolean needHack(int callingUid, String[] packages) {
-        if (packages == null) return false;
         refreshTargets();
         ensureTeeStatus();
-        for (String pkg : packages) {
-            Mode mode = mPackageModes.get(pkg);
-            if (mode == Mode.LEAF_HACK) return true;
-            if (mode == Mode.AUTO && !mTeeBroken) return true;
+        if (packages != null && packages.length > 0) {
+            for (String pkg : packages) {
+                if (shouldHackPackage(pkg)) return true;
+            }
+        }
+        String currentPkg = ActivityThread.currentPackageName();
+        if (currentPkg != null && shouldHackPackage(currentPkg)) {
+            return true;
         }
         return false;
     }
 
+    private boolean shouldHackPackage(String pkg) {
+        Mode mode = mPackageModes.get(pkg);
+        if (mode == null && (mPackageModes.isEmpty() || DEFAULT_TARGETS.contains(pkg))) {
+            mode = Mode.AUTO;
+        }
+        if (mode == Mode.LEAF_HACK) return true;
+        if (mode == Mode.AUTO && !mTeeBroken) return true;
+        return false;
+    }
+
     public boolean needGenerate(int callingUid, String[] packages) {
-        if (packages == null) return false;
         refreshTargets();
         ensureTeeStatus();
-        for (String pkg : packages) {
-            Mode mode = mPackageModes.get(pkg);
-            if (mode == Mode.GENERATE) return true;
-            if (mode == Mode.AUTO && mTeeBroken) return true;
+        if (packages != null && packages.length > 0) {
+            for (String pkg : packages) {
+                if (shouldGeneratePackage(pkg)) return true;
+            }
         }
+        String currentPkg = ActivityThread.currentPackageName();
+        if (currentPkg != null && shouldGeneratePackage(currentPkg)) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean shouldGeneratePackage(String pkg) {
+        Mode mode = mPackageModes.get(pkg);
+        if (mode == null && (mPackageModes.isEmpty() || DEFAULT_TARGETS.contains(pkg))) {
+            mode = Mode.AUTO;
+        }
+        if (mode == Mode.GENERATE) return true;
+        if (mode == Mode.AUTO && mTeeBroken) return true;
         return false;
     }
 
