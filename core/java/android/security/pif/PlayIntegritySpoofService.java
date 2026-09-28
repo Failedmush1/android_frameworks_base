@@ -35,11 +35,13 @@ public final class PlayIntegritySpoofService {
     private static final String GMS_PACKAGE = "com.google.android.gms";
     private static final String GPHOTOS_PACKAGE = "com.google.android.apps.photos";
 
-    private static final Map<String, String> sPhotosProps = Map.of(
-        "PRODUCT", "marlin",
-        "DEVICE", "marlin",
-        "MANUFACTURER", "Google",
+    private static final Map<String, Object> PIXEL_XL_PROPS = Map.of(
         "BRAND", "google",
+        "MANUFACTURER", "Google",
+        "DEVICE", "marlin",
+        "PRODUCT", "marlin",
+        "HARDWARE", "marlin",
+        "ID", "QP1A.191005.007.A3",
         "MODEL", "Pixel XL",
         "FINGERPRINT", "google/marlin/marlin:10/QP1A.191005.007.A3/5972272:user/release-keys"
     );
@@ -160,7 +162,9 @@ public final class PlayIntegritySpoofService {
 
     private volatile boolean mConfigLoaded = false;
     private volatile boolean mSignatureSpoofed = false;
-    private volatile boolean mSpoofPhotos = true;
+    private volatile boolean mSpoofPhotos = false;
+
+    private final Object mLoadLock = new Object();
 
     private PlayIntegritySpoofService() {}
 
@@ -169,36 +173,63 @@ public final class PlayIntegritySpoofService {
             sInstance = new PlayIntegritySpoofService();
             sInstance.loadConfig();
         }
+        sInstance.ensureLoaded();
         return sInstance;
     }
 
-    public void loadConfig() {
-        mBuildFields.clear();
-        mSystemProps.clear();
-        mConfigLoaded = false;
+    private void ensureLoaded() {
+        if (mConfigLoaded) return;
+        synchronized (mLoadLock) {
+            if (mConfigLoaded) return;
+            loadConfigInternal();
+        }
+    }
 
-        IActivityManager am = ActivityManager.getService();
-        if (am == null) {
-            Log.w(TAG, "ActivityManager not ready, skipping PIF config load");
+    public void loadConfig() {
+        synchronized (mLoadLock) {
+            loadConfigInternal();
+        }
+    }
+
+    private void loadConfigInternal() {
+        IActivityManager service = ActivityManager.getService();
+        if (service == null) {
+            if (mVerboseLogs > 0) Log.w(TAG, "ActivityManager not ready, skipping PIF config load");
             return;
         }
 
         String content;
         try {
-            content = am.getSpoofPifConfig();
-            String spoofPhotos = am.getSpoofPifSpoofPhotos();
-            mSpoofPhotos = spoofPhotos == null || "1".equals(spoofPhotos) || "true".equalsIgnoreCase(spoofPhotos);
+            content = service.getSpoofPifConfig();
+            String spoofPhotos = service.getSpoofPifSpoofPhotos();
+            mSpoofPhotos = spoofPhotos == null || "1".equals(spoofPhotos)
+                            || "true".equalsIgnoreCase(spoofPhotos);
         } catch (Throwable e) {
             Log.e(TAG, "Failed to fetch PIF config from system_server", e);
             return;
         }
 
         if (content == null || content.isEmpty()) {
-            Log.w(TAG, "No PIF config in Settings.Secure");
+            mBuildFields.clear();
+            mSystemProps.clear();
+            mConfigLoaded = false;
+            if (mVerboseLogs > 0) Log.w(TAG, "No PIF config in Settings.Secure");
             return;
         }
 
+        mVerboseLogs = 0;
+        mSpoofBuild = true;
+        mSpoofProps = true;
+        mSpoofProvider = true;
+        mSpoofSignature = false;
+        mSpoofVendingBuild = true;
+        mSpoofVendingSdk = false;
+        mDebug = false;
+
         try {
+            mBuildFields.clear();
+            mSystemProps.clear();
+
             String trimmed = content.trim();
             if (trimmed.startsWith("{")) {
                 parseJson(content);
@@ -208,8 +239,7 @@ public final class PlayIntegritySpoofService {
 
             mConfigLoaded = true;
             Log.i(TAG, "PIF config loaded, fields=" + mBuildFields.size()
-                + ", props=" + mSystemProps.size());
-
+                    + ", props=" + mSystemProps.size());
         } catch (Throwable e) {
             Log.e(TAG, "Failed to load PIF config", e);
         }
@@ -308,6 +338,7 @@ public final class PlayIntegritySpoofService {
     }
 
     public boolean shouldSpoof(String processName) {
+        ensureLoaded();
         if (!mConfigLoaded) return false;
         return DROIDGUARD_PACKAGE.equals(processName) || VENDING_PACKAGE.equals(processName);
     }
@@ -326,6 +357,7 @@ public final class PlayIntegritySpoofService {
     }
 
     public void spoofBuildFields(String processName) {
+        ensureLoaded();
         if (!mConfigLoaded) return;
 
         boolean isVending = isVending(processName);
@@ -501,6 +533,7 @@ public final class PlayIntegritySpoofService {
     }
 
     public String getSpoofedProperty(String key) {
+        ensureLoaded();
         if (key == null || !mSpoofProps || !mConfigLoaded) return null;
 
         String value = mSystemProps.get(key);
@@ -517,10 +550,12 @@ public final class PlayIntegritySpoofService {
     }
 
     public boolean isSpoofSignatureEnabled() {
+        ensureLoaded();
         return mSpoofSignature && mConfigLoaded;
     }
 
     public boolean isSpoofProviderEnabled() {
+        ensureLoaded();
         return mSpoofProvider && mConfigLoaded;
     }
 
@@ -545,14 +580,16 @@ public final class PlayIntegritySpoofService {
     }
 
     public boolean shouldSpoofPhotos(String packageName) {
+        ensureLoaded();
         if (!TextUtils.equals(GPHOTOS_PACKAGE, packageName)) return false;
         return mSpoofPhotos;
     }
 
     public void spoofPhotosProps() {
-        for (Map.Entry<String, String> entry : sPhotosProps.entrySet()) {
-            spoofField(entry.getKey(), entry.getValue(), "GP");
+        for (Map.Entry<String, Object> entry : PIXEL_XL_PROPS.entrySet()) {
+            spoofField(entry.getKey(), String.valueOf(entry.getValue()), "Photos");
         }
+        Log.i(TAG, "Photos spoofing enabled - device appears as Pixel XL");
     }
 
     public Boolean hasSystemFeature(String name, int version) {
