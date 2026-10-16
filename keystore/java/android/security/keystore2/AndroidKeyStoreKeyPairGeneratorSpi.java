@@ -722,6 +722,9 @@ public abstract class AndroidKeyStoreKeyPairGeneratorSpi extends KeyPairGenerato
                 params.certificateNotAfter = mSpec.getCertificateNotAfter();
                 params.rsaPublicExponent = mRSAPublicExponent == null ? null : BigInteger.valueOf(mRSAPublicExponent);
                 params.ecCurveName = mEcCurveName;
+                if (mKeymasterAlgorithm == KeymasterDefs.KM_ALGORITHM_EC) {
+                    params.ecCurve = keySizeAndNameToEcCurve(mKeySizeBits, mEcCurveName);
+                }
                 params.attestationChallenge = mSpec.getAttestationChallenge();
 
                 if (mKeymasterPurposes != null) {

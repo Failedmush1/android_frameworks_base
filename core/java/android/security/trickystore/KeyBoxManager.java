@@ -70,7 +70,7 @@ public class KeyBoxManager {
     }
 
     public KeyBox getKeybox(String algorithm) {
-        if (algorithm == null) return null;
+        if (algorithm == null) return getAnyKeybox();
         String normalized;
         if ("ecdsa".equalsIgnoreCase(algorithm) || "ec".equalsIgnoreCase(algorithm)) {
             normalized = "EC";
@@ -82,6 +82,30 @@ public class KeyBoxManager {
         KeyBox box = mKeyboxes.get(normalized);
         if (box == null && "EC".equals(normalized)) {
             box = mKeyboxes.get("ECDSA");
+        }
+        // RKP keybox fallback: RKP-provisioned keyboxes only contain an EC (P-256) key and certificate chain.
+        // If an RSA keybox was requested but none is present, fall back to EC keybox.
+        // Real RKP devices sign both EC and RSA keys using the EC batch key.
+        if (box == null) {
+            box = getAnyKeybox();
+            if (box != null) {
+                Log.i(TAG, "Keybox for " + algorithm + " not found, falling back to "
+                        + box.keyPair.getPrivate().getAlgorithm() + " keybox (RKP mode)");
+            }
+        }
+        return box;
+    }
+
+    public KeyBox getAnyKeybox() {
+        KeyBox box = mKeyboxes.get("EC");
+        if (box == null) {
+            box = mKeyboxes.get("ECDSA");
+        }
+        if (box == null) {
+            box = mKeyboxes.get("RSA");
+        }
+        if (box == null && !mKeyboxes.isEmpty()) {
+            box = mKeyboxes.values().iterator().next();
         }
         return box;
     }
@@ -214,6 +238,9 @@ public class KeyBoxManager {
                 PublicKey publicKey = ((X509Certificate) certificates.get(0)).getPublicKey();
                 KeyPair keyPair = new KeyPair(publicKey, privateKey);
                 mKeyboxes.put(normalizedAlgorithm, new KeyBox(keyPair, certificates));
+                if ("EC".equals(normalizedAlgorithm)) {
+                    mKeyboxes.put("ECDSA", new KeyBox(keyPair, certificates));
+                }
                 Log.i(TAG, "Added keybox for algorithm: " + normalizedAlgorithm);
             }
         } catch (Exception e) {

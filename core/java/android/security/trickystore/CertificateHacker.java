@@ -118,7 +118,10 @@ public final class CertificateHacker {
                 leafHolder.getSubjectPublicKeyInfo()
             );
 
-            ContentSigner signer = createBCSigner(leaf.getSigAlgName(), keybox.keyPair.getPrivate());
+            String keyboxAlg = keybox.keyPair.getPrivate().getAlgorithm();
+            boolean isEcSigner = "EC".equalsIgnoreCase(keyboxAlg) || "ECDSA".equalsIgnoreCase(keyboxAlg);
+            String sigAlg = isEcSigner ? "SHA256withECDSA" : "SHA256withRSA";
+            ContentSigner signer = createBCSigner(sigAlg, keybox.keyPair.getPrivate());
 
             Extension hackedExtension = hackAttestExtension(originalRootOfTrust, vector, encodables);
             builder.addExtension(hackedExtension);

@@ -227,12 +227,23 @@ public class TrickyStoreService {
 
     private String decodeKeybox(String payload) {
         String trimmed = payload.trim();
+        String[] boms = {"\uFEFF", "\uFFFE", "\u0000\uFEFF"};
+        for (String bom : boms) {
+            if (trimmed.startsWith(bom)) {
+                trimmed = trimmed.substring(bom.length()).trim();
+            }
+        }
         if (trimmed.startsWith("<")) {
             return trimmed;
         }
         try {
             byte[] decoded = Base64.getDecoder().decode(trimmed);
             String asXml = new String(decoded, StandardCharsets.UTF_8).trim();
+            for (String bom : boms) {
+                if (asXml.startsWith(bom)) {
+                    asXml = asXml.substring(bom.length()).trim();
+                }
+            }
             if (asXml.startsWith("<")) {
                 return asXml;
             }

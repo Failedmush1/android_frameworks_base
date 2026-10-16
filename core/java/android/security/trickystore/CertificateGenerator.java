@@ -93,6 +93,17 @@ public final class CertificateGenerator {
                 default: return "secp256r1";
             }
         }
+
+        public int getEcCurve() {
+            if (ecCurve != 0) return ecCurve;
+            switch (keySize) {
+                case 224: return 0; // KM_EC_CURVE_P_224
+                case 256: return 1; // KM_EC_CURVE_P_256
+                case 384: return 2; // KM_EC_CURVE_P_384
+                case 521: return 3; // KM_EC_CURVE_P_521
+                default: return 1;
+            }
+        }
     }
 
     public static KeyPair generateKeyPair(KeyGenParameters params) {
@@ -190,9 +201,11 @@ public final class CertificateGenerator {
         builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign));
         builder.addExtension(buildAttestExtension(params, securityLevel, uid));
 
-        String sigAlg = params.algorithm == 3 ? "SHA256withECDSA" : "SHA256withRSA";
+        String keyboxAlg = keybox.keyPair.getPrivate().getAlgorithm();
+        boolean isEcSigner = "EC".equalsIgnoreCase(keyboxAlg) || "ECDSA".equalsIgnoreCase(keyboxAlg);
+        String sigAlg = isEcSigner ? "SHA256withECDSA" : "SHA256withRSA";
         JcaContentSignerBuilder signerBuilder = new JcaContentSignerBuilder(sigAlg);
-        if (params.algorithm == 3) {
+        if (isEcSigner) {
             signerBuilder.setProvider(new BouncyCastleProvider());
         }
         ContentSigner signer = signerBuilder.build(keybox.keyPair.getPrivate());
@@ -248,7 +261,9 @@ public final class CertificateGenerator {
                 teeEnforced.add(new DERTaggedObject(true, 203, new DERSet(mgfDigests)));
             }
 
-            teeEnforced.add(new DERTaggedObject(true, 10, new ASN1Integer(params.ecCurve)));
+            if (params.algorithm == 3) {
+                teeEnforced.add(new DERTaggedObject(true, 10, new ASN1Integer(params.getEcCurve())));
+            }
             teeEnforced.add(new DERTaggedObject(true, 503, DERNull.INSTANCE));
             teeEnforced.add(new DERTaggedObject(true, 702, new ASN1Integer(0)));
             teeEnforced.add(new DERTaggedObject(true, 704, rootOfTrust));
