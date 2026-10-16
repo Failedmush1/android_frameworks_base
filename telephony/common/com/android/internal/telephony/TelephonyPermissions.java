@@ -813,4 +813,31 @@ public final class TelephonyPermissions {
     public static boolean isShell(int uid) {
         return UserHandle.isSameApp(uid, Process.SHELL_UID);
     }
+
+    /**
+     * Check if calling user is associated with the given subscription.
+     * In Android 13, multi-user subscription association is not supported; always returns true.
+     * @param context Context
+     * @param subId subscription ID
+     * @param callerUserHandle caller user handle
+     * @return true if user is associated with the subscription
+     */
+    public static boolean checkSubscriptionAssociatedWithUser(Context context, int subId,
+            UserHandle callerUserHandle) {
+        return true;
+    }
+
+    /**
+     * Check if calling user is associated with the given subscription.
+     * In Android 13, multi-user subscription association is not supported; always returns true.
+     * @param context Context
+     * @param subId subscription ID
+     * @param callerUserHandle caller user handle
+     * @param destAddr destination address
+     * @return true if user is associated with the subscription
+     */
+    public static boolean checkSubscriptionAssociatedWithUser(Context context, int subId,
+            UserHandle callerUserHandle, @Nullable String destAddr) {
+        return true;
+    }
 }
